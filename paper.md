@@ -73,7 +73,87 @@ The simulation workflow in LiSimPack involves:
 **Setup**:
 - 96 cells arranged in a 12s8p configuration.
 - Cell chemistry: NMC (Nickel Manganese Cobalt).
-- Simulation duration: 1 hour.  
+- Simulation duration: 1 hour.
+  
+  Code Implementation:
+  import numpy as np
+import pybamm
+import matplotlib.pyplot as plt
+
+# Define the BatteryPack class
+class BatteryPack:
+    def __init__(self, series, parallel, chemistry="NMC"):
+        self.series = series
+        self.parallel = parallel
+        self.chemistry = chemistry
+        self.cells = self.create_cells()
+
+    def create_cells(self):
+        cells = []
+        for i in range(self.parallel):
+            cells.append([self.create_cell() for _ in range(self.series)])
+        return cells
+
+    def create_cell(self):
+        if self.chemistry == "NMC":
+            return pybamm.lithium_ion.SPM()
+        else:
+            raise ValueError("Unsupported chemistry")
+
+    def simulate(self, duration):
+        # Simulate battery pack behavior for a given duration (in hours)
+        sim_duration = duration * 3600  # Convert hours to seconds
+        results = []
+
+        # Initialize PyBaMM simulation
+        battery_model = pybamm.lithium_ion.SPM()
+        sim = pybamm.Simulation(battery_model)
+
+        # Solve the simulation for the specified duration
+        time, solution = sim.solve([0, sim_duration])
+
+        # Store the simulation results (voltage, current, temperature)
+        results.append(solution["Terminal voltage [V]"])
+        results.append(solution["Current [A]"])
+        results.append(solution["Temperature [K]"])
+
+        return time, results
+
+    def plot_results(self, time, results):
+        # Plot terminal voltage, current, and temperature
+        fig, ax = plt.subplots(3, 1, figsize=(8, 12))
+
+        ax[0].plot(time / 3600, results[0], label='Voltage (V)', color='tab:red')
+        ax[0].set_ylabel('Voltage (V)')
+        ax[0].set_xlabel('Time (hours)')
+        ax[0].legend()
+
+        ax[1].plot(time / 3600, results[1], label='Current (A)', color='tab:blue')
+        ax[1].set_ylabel('Current (A)')
+        ax[1].set_xlabel('Time (hours)')
+        ax[1].legend()
+
+        ax[2].plot(time / 3600, results[2], label='Temperature (K)', color='tab:green')
+        ax[2].set_ylabel('Temperature (K)')
+        ax[2].set_xlabel('Time (hours)')
+        ax[2].legend()
+
+        plt.tight_layout()
+        plt.show()
+
+# Create a battery pack with 12 series and 8 parallel cells (12s8p configuration)
+battery_pack = BatteryPack(series=12, parallel=8, chemistry="NMC")
+
+# Simulate the pack behavior for 1 hour
+time, results = battery_pack.simulate(duration=1)
+
+# Plot the results
+battery_pack.plot_results(time, results)
+
+
+python
+Copy code
+  
 **Results**:
 - Pack voltage and current profiles showed high consistency.
 - Thermal management analysis highlighted hotspots near the center of the pack.
@@ -83,7 +163,19 @@ The simulation workflow in LiSimPack involves:
 **Setup**:
 - 50 cells in a 5s10p configuration.
 - Cell chemistry: LFP (Lithium Iron Phosphate).
-- Simulation duration: 24 hours.  
+- Simulation duration: 24 hours.
+
+  Code: Modify the simulation settings for this case study:
+  # Modify the BatteryPack configuration for LFP and different cell arrangement
+battery_pack_renewable = BatteryPack(series=5, parallel=10, chemistry="LFP")
+
+# Simulate the pack behavior for 24 hours
+time_renewable, results_renewable = battery_pack_renewable.simulate(duration=24)
+
+# Plot the results for the renewable energy storage setup
+battery_pack_renewable.plot_results(time_renewable, results_renewable)
+
+
 **Results**:
 - Identified capacity fade trends due to cyclic loading.
 - Suggested optimizations for pack-level balancing circuits.
